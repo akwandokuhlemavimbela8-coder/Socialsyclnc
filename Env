@@ -1,0 +1,44 @@
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/socialsync
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Encryption
+ENCRYPTION_KEY=your-32-byte-hex-encryption-key-64chars!!
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:3001
+
+# API Keys
+OPENAI_API_KEY=sk-your-openai-key
+PEXELS_API_KEY=your-pexels-key
+PIXABAY_API_KEY=your-pixabay-key
+COVERR_API_KEY=your-coverr-key
+
+# TikTok
+TIKTOK_CLIENT_ID=your-tiktok-client-id
+TIKTOK_CLIENT_SECRET=your-tiktok-client-secret
+
+# Instagram (Facebook)
+INSTAGRAM_CLIENT_ID=your-instagram-client-id
+INSTAGRAM_CLIENT_SECRET=your-instagram-client-secret
+INSTAGRAM_CONFIG_ID=your-instagram-config-id
+
+# YouTube (Google)
+YOUTUBE_CLIENT_ID=your-youtube-client-id
+YOUTUBE_CLIENT_SECRET=your-youtube-client-secret
+
+# AWS S3 (for video storage)
+AWS_ACCESS_KEY_ID=your-aws-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret
+AWS_S3_BUCKET=your-bucket-name
+AWS_REGION=us-east-1
+
+# Node Environment
+NODE_ENV=development
+PORT=3001
