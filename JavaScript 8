@@ -1,0 +1,56 @@
+const express = require('express');
+const router = express.Router();
+const aiService = require('../services/aiContentService');
+
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No token' });
+  
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// Search copyright-free videos
+router.get('/inspiration', authenticate, async (req, res) => {
+  try {
+    const { query, orientation, duration, page } = req.query;
+    const results = await aiService.searchInspirationVideos(query, {
+      orientation,
+      duration,
+      page: parseInt(page) || 1
+    });
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate hashtags
+router.post('/hashtags', authenticate, async (req, res) => {
+  try {
+    const { topic, platform, count } = req.body;
+    const result = await aiService.generateHashtags(topic, platform, count);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get content ideas
+router.post('/ideas', authenticate, async (req, res) => {
+  try {
+    const { niche, platform } = req.body;
+    const result = await aiService.getContentIdeas(niche, platform);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
