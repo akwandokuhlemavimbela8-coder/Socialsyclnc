@@ -1,0 +1,80 @@
+const express = require('express');
+const router = express.Router();
+
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No token' });
+  
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// Get notifications
+router.get('/', authenticate, async (req, res) => {
+  try {
+    const notifications = req.app.locals.notifications;
+    const result = await notifications.getNotifications(req.userId, {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      unreadOnly: req.query.unreadOnly === 'true'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark as read
+router.post('/read', authenticate, async (req, res) => {
+  try {
+    const notifications = req.app.locals.notifications;
+    await notifications.markAsRead(req.userId, req.body.notificationIds);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark all as read
+router.post('/read-all', authenticate, async (req, res) => {
+  try {
+    const notifications = req.app.locals.notifications;
+    await notifications.markAllAsRead(req.userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get unread count (for badge)
+router.get('/count', authenticate, async (req, res) => {
+  try {
+    const notifications = req.app.locals.notifications;
+    const count = await notifications.getUnreadCount(req.userId);
+    res.json(count);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get post engagement
+router.get('/post/:postId/engagement', authenticate, async (req, res) => {
+  try {
+    const notifications = req.app.locals.notifications;
+    const engagement = await notifications.fetchPostEngagement(
+      req.userId,
+      req.params.postId
+    );
+    res.json(engagement);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
