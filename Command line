@@ -1,0 +1,19 @@
+# Clone your repo
+git clone https://github.com/YOUR_USERNAME/socialsync.git
+cd socialsync
+
+# Create folder structure
+mkdir -p backend/config backend/middleware backend/services backend/routes backend/models
+mkdir -p frontend/css frontend/js
+mkdir -p .github/workflows
+
+# Create empty files
+touch backend/config/database.js backend/config/redis.js
+touch backend/middleware/auth.js backend/middleware/errorHandler.js backend/middleware/rateLimiter.js
+touch backend/services/authService.js backend/services/schedulerService.js backend/services/notificationService.js backend/services/aiContentService.js
+touch backend/routes/auth.js backend/routes/posts.js backend/routes/schedule.js backend/routes/notifications.js backend/routes/ai.js
+touch backend/models/schema.sql
+touch backend/server.js backend/package.json
+touch frontend/index.html frontend/css/styles.css frontend/js/app.js
+touch .github/workflows/deploy.yml
+touch .env.example .gitignore
