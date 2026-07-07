@@ -1,0 +1,153 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const authService = require('../services/authService');
+
+// Register
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, fullName } = req.body;
+    const db = req.app.locals.db;
+    
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    const result = await db.query(
+      `INSERT INTO users (email, password_hash, full_name) 
+       VALUES ($1, $2, $3) RETURNING id, email, full_name`,
+      [email, hashedPassword, fullName]
+    );
+    
+    const token = jwt.sign(
+      { userId: result.rows[0].id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      token,
+      user: result.rows[0]
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const db = req.app.locals.db;
+    
+    const result = await db.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const user = result.rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        plan: user.plan
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get current user
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const result = await db.query(
+      'SELECT id, email, full_name, plan, avatar_url FROM users WHERE id = $1',
+      [req.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get OAuth URL for platform
+router.post('/connect/:platform', authenticate, async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const redirectUri = `${process.env.BACKEND_URL}/api/auth/callback/${platform}`;
+    
+    const url = await authService.getOAuthUrl(
+      platform,
+      req.userId,
+      redirectUri
+    );
+    
+    res.json({ url });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// OAuth callback
+router.get('/callback/:platform', async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const { code, state } = req.query;
+    
+    await authService.handleCallback(platform, code, state);
+    
+    // Redirect back to frontend
+    res.redirect(`${process.env.FRONTEND_URL}/#connected-platforms?success=true`);
+  } catch (err) {
+    res.redirect(`${process.env.FRONTEND_URL}/#connected-platforms?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+// Get connected platforms
+router.get('/platforms', authenticate, async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const result = await db.query(
+      'SELECT platform, created_at FROM platform_tokens WHERE user_id = $1',
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Middleware
+function authenticate(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No token' });
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+module.exports = router;
